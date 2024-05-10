@@ -140,8 +140,6 @@ def test_determine_rank():
 
     for score, expected_rank in zip(test_scores, expected_ranks):
         actual_rank = determine_rank(score)
-        print(f"Score: {score}, Verwachte Rang: {expected_rank}, Werkelijke Rang: {actual_rank}")
-
 
 test_determine_rank()
 
