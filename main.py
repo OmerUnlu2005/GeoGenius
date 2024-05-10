@@ -3,6 +3,7 @@ import sys
 import random
 import os
 import math
+import threading
 
 # Initialize Pygame
 pygame.init()
@@ -17,10 +18,10 @@ pygame.display.set_caption("Multiple Choice Quiz")
 # Define colors
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
-BLUE = (139,121,94)
-BROWN = (238,207,161)  # Diamond blueish color
-GREY = (180,205,205)
-RED = (224,255,255)
+BLUE = (139, 121, 94)
+BROWN = (238, 207, 161)  # Diamond blueish color
+GREY = (180, 205, 205)
+RED = (224, 255, 255)
 # File to store high scores
 high_scores_file = 'highscores.txt'
 
@@ -102,12 +103,12 @@ answers = [
     [["35-0 mil", True], ["480-520 mil", False], ["440-420 mil", False], ["350-300 mil", False]],
     [["Basaltisch", True], ["Graniet", False], ["Obsidiaan", False], ["Pumice", False]],
     [["Aardbevingen", False], ["Gebergtevorm", True], ["Vulkanisme", False], ["Erosie", False]],
-    [["Transport van", False], ["Gesteente worden", True], ["Bij het einde", False], ["Gebergtevorming", False]],
+    [["sedimenttransport", False], ["Gesteentevormingn", True], ["afbraak", False], ["Gebergtevorming", False]],
     [["Structuur", True], ["Weer op aarde", False], ["Sterrenstelsels", False], ["Oceanografie", False]],
     [["Oudste onder", True], ["Alle lagen in", False], ["De jongste lagen", False], ["De lagen in", False]],
     [["Onderzeese", True], ["Onderzeese", False], ["Diepe trog", False], ["Geologische", False]],
     [["Chemische", False], ["Fysische", False], ["Vulkanische", False], ["Opeenhoping", True]],
-    [["Gevormd door", True], ["Nieuw gevormde", False], ["Gevormd door", False], ["Gevormd door", False]],
+    [["Gneis & Schist", True], ["Graniet & Leisteen", False], ["Marmer & Kwartsiet", False], ["Gneis & Basalt", False]],
     [["Klei/leem", True], ["Zandsteen", True], ["Kalksteen", True], ["Conglomeraat", False]],
     [["Zout", True], ["Dretitisch", False], ["Grind", False], ["Zand", False]],
     [["Gneis", True], ["Kwartsiet", True], ["Leisteen", True], ["Marmer", True]]
@@ -122,7 +123,6 @@ rank_thresholds = {
     33: "Diamant"
 }
 
-
 # Function to determine the player's rank based on their score
 def determine_rank(score):
     sorted_thresholds = sorted(rank_thresholds.items(), key=lambda x: x[0])
@@ -132,18 +132,6 @@ def determine_rank(score):
             best_rank = rank
     return best_rank
 
-
-# Test the determine_rank function
-def test_determine_rank():
-    test_scores = [1, 3, 5, 7, 9]
-    expected_ranks = ["Brons", "Zilver", "Goud", "Platinum", "Diamant"]
-
-    for score, expected_rank in zip(test_scores, expected_ranks):
-        actual_rank = determine_rank(score)
-
-test_determine_rank()
-
-
 # Function to read the player's rank from a file
 def read_rank_from_file(filename):
     if not os.path.exists(filename):
@@ -152,11 +140,12 @@ def read_rank_from_file(filename):
         rank = file.readline().strip()
     return rank
 
-
 rank_scores_file = 'rank_scores.txt'
 
 # Function to write the rank to a file
-
+def write_rank_to_file(filename, rank):
+    with open(filename, 'w') as file:
+        file.write(rank)
 
 # Define variables
 current_question = 0
@@ -167,7 +156,7 @@ random.shuffle(answers[current_question])
 
 # Define button dimensions
 BUTTON_RADIUS = int(SCREEN_HEIGHT / 8)
-BUTTON_GAP_X = int(SCREEN_WIDTH / 15)
+BUTTON_GAP_X = int(SCREEN_WIDTH / 70)
 BUTTON_GAP_Y = int(SCREEN_HEIGHT / 20)
 
 # Define border properties
@@ -177,7 +166,6 @@ border_width = 4
 # Define padding for the question and score borders
 PADDING_X = 30
 PADDING_Y = 20
-
 
 class Button:
     def __init__(self, text, position):
@@ -201,37 +189,6 @@ class Button:
         screen.blit(text_surface, text_rect)
 
 
-# Function to read high scores from a text file
-def read_high_scores(filename):
-    if not os.path.exists(filename):
-        return [0, 0, 0]
-    with open(filename, 'r') as file:
-        scores = [int(line.strip()) for line in file.readlines()]
-    return scores
-
-
-# Function to write high scores to a text file
-def write_high_scores(filename, scores):
-    with open(filename, 'w') as file:
-        for score in scores:
-            file.write(f"{score}\n")
-
-
-# Function to update high scores with a new score
-def update_high_scores(high_scores, new_score):
-    if new_score in high_scores:
-        return high_scores
-    high_scores.append(new_score)
-    high_scores.sort(reverse=True)
-
-    high_scores = high_scores[:3]
-
-    write_high_scores(high_scores_file, high_scores)
-
-    return high_scores
-
-
-image = pygame.image.load("backgroundmain.png")
 # Function to draw the start page
 def draw_start_page():
     background_image = pygame.image.load("background.jpg")
@@ -317,125 +274,142 @@ def draw_end_screen():
 
     pygame.display.flip()
 
-# Main start screen loop
-start_screen_running = True
+# Function to update high scores with a new score
+def update_high_scores(high_scores, new_score):
+    if new_score in high_scores:
+        return high_scores
+    high_scores.append(new_score)
+    high_scores.sort(reverse=True)
 
-while start_screen_running:
-    draw_start_page()
+    high_scores = high_scores[:3]
 
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            start_screen_running = False
-        elif event.type == pygame.KEYDOWN and event.key == pygame.K_s:
-            start_screen_running = False
+    write_high_scores(high_scores_file, high_scores)
 
-# Highscores initialiseren buiten de loop
-high_scores = read_high_scores(high_scores_file)
+    return high_scores
 
-# Main game loop
+# Function to read high scores from a text file
+def read_high_scores(filename):
+    if not os.path.exists(filename):
+        return [0, 0, 0]
+    with open(filename, 'r') as file:
+        scores = [int(line.strip()) for line in file.readlines()]
+    return scores
+
+# Function to write high scores to a text file
+def write_high_scores(filename, scores):
+    with open(filename, 'w') as file:
+        for score in scores:
+            file.write(f"{score}\n")
+
+# Function to read the player's rank from a file
+def read_rank_from_file(filename):
+    if not os.path.exists(filename):
+        return "Brons"
+    with open(filename, 'r') as file:
+        rank = file.readline().strip()
+    return rank
+
+# Function to write the rank to a file
+def write_rank_to_file(filename, rank):
+    with open(filename, 'w') as file:
+        file.write(rank)
+
+# Test the determine_rank function
+def test_determine_rank():
+    test_scores = [1, 3, 5, 7, 9]
+    expected_ranks = ["Brons", "Zilver", "Goud", "Platinum", "Diamant"]
+
+    for score, expected_rank in zip(test_scores, expected_ranks):
+        assert determine_rank(score) == expected_rank
+
+# Function to load images in a separate thread
+def load_images():
+    for i in range(len(questions)):
+        image_filename = f"images/{i}.png"
+        if os.path.exists(image_filename):
+            image = pygame.image.load(image_filename)
+            loaded_images.append(image)
+        else:
+            loaded_images.append(None)
+
+# Load images in a separate thread
+loaded_images = []
+image_loading_thread = threading.Thread(target=load_images)
+image_loading_thread.start()
+
+
+
+# Main loop
 running = True
-quiz_ended = False
+start_page = True
+end_screen = False
+background_image = pygame.image.load("backgroundmain.png")
 
 while running:
-    screen.fill(WHITE)
-
-    screen.blit(image, (0, 0))
-
-    if not quiz_ended:
-        question_text = font.render(questions[current_question], True, BLACK)
-        question_rect = question_text.get_rect(center=(SCREEN_WIDTH // 2, int(SCREEN_HEIGHT / 10)))
-
-        pygame.draw.rect(screen, BROWN, question_rect.inflate(PADDING_X, PADDING_Y))
-
-        pygame.draw.rect(screen, border_color, question_rect.inflate(PADDING_X, PADDING_Y), border_width)
-
-        screen.blit(question_text, question_rect)
-
-        score_text = small_font.render("Score: " + str(score), True, BLACK)
-        score_rect = score_text.get_rect(
-            bottomleft=(int(SCREEN_WIDTH / 20), int(SCREEN_HEIGHT - SCREEN_HEIGHT / 20)))
-
-        pygame.draw.rect(screen, BROWN, score_rect.inflate(PADDING_X, PADDING_Y))
-
-        pygame.draw.rect(screen, border_color, score_rect.inflate(PADDING_X, PADDING_Y), border_width)
-
-        screen.blit(score_text, score_rect)
-
-        buttons = []
-        for i, (answer, _) in enumerate(answers[current_question]):
-            col = i % 2
-            row = i // 2
-            button_x = (SCREEN_WIDTH - BUTTON_RADIUS * 2 - BUTTON_GAP_X) // 2 + col * (
-                    BUTTON_RADIUS * 2 + BUTTON_GAP_X)
-            button_y = int(SCREEN_HEIGHT / 3) + row * (BUTTON_RADIUS * 2 + BUTTON_GAP_Y)
-            button = Button(answer, (button_x, button_y))
-            buttons.append(button)
-
-        for button in buttons:
-            button.draw()
-
-    else:
-        draw_end_screen()
-
-    pygame.display.flip()
-
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
         elif event.type == pygame.KEYDOWN:
-            if quiz_ended:
-                if event.key == pygame.K_r:
-                    current_question = 0
-                    score = 0
-                    quiz_ended = False
+            if event.key == pygame.K_ESCAPE:
+                running = False
+            elif event.key == pygame.K_s and start_page:
+                start_page = False
+                end_screen = False
+            elif event.key == pygame.K_r and end_screen:
+                current_question = 0
+                score = 0
+                start_page = True
+                end_screen = False
+                image_loading_thread = threading.Thread(target=load_images)
+                image_loading_thread.start()
+        elif event.type == pygame.MOUSEBUTTONDOWN:
+            if not start_page and not end_screen:
+                mouse_pos = pygame.mouse.get_pos()
+                for idx, button in enumerate(buttons):
+                    if button.rect.collidepoint(mouse_pos):
+                        button.clicked = True
+                        if answers[current_question][idx][1]:
+                            score += 1
+                        current_question += 1
+                        if current_question >= len(questions):
+                            end_screen = True
+                            buttons.clear()
+                        else:
+                            buttons.clear()
+                            random.shuffle(answers[current_question])
+                            break
 
-                    buttons.clear()
-                    random.shuffle(answers[current_question])
-                    for i, (answer, _) in enumerate(answers[current_question]):
-                        col = i % 2
-                        row = i // 2
-                        button_x = (SCREEN_WIDTH - BUTTON_RADIUS * 2 - BUTTON_GAP_X) // 2 + col * (
-                                BUTTON_RADIUS * 2 + BUTTON_GAP_X)
-                        button_y = int(SCREEN_HEIGHT / 3) + row * (BUTTON_RADIUS * 2 + BUTTON_GAP_Y)
-                        buttons.append(Button(answer, (button_x, button_y)))
-                elif event.key == pygame.K_ESCAPE:
-                    running = False
-        elif event.type == pygame.MOUSEBUTTONDOWN and not quiz_ended:
-            x, y = event.pos
-            for button in buttons:
-                if button.rect.collidepoint(x, y):
-                    button.clicked = True
-                    if answers[current_question][buttons.index(button)][1]:
-                        score += 1
-                    current_question += 1
-                    if current_question < len(questions):
-                        buttons.clear()
-                        random.shuffle(answers[current_question])
-                        for i, (answer, _) in enumerate(answers[current_question]):
-                            col = i % 2
-                            row = i // 2
-                            button_x = (SCREEN_WIDTH - BUTTON_RADIUS * 2 - BUTTON_GAP_X) // 2 + col * (
-                                    BUTTON_RADIUS * 2 + BUTTON_GAP_X)
-                            button_y = int(SCREEN_HEIGHT / 3) + row * (BUTTON_RADIUS * 2 + BUTTON_GAP_Y)
-                            buttons.append(Button(answer, (button_x, button_y)))
-                        quiz_ended = False
-                    else:
-                        quiz_ended = True
-                        # Update en schrijf de highscores naar het bestand
-                        high_scores = update_high_scores(high_scores, score)
-                        write_high_scores(high_scores_file, high_scores)
+    screen.fill(WHITE)
+    screen.blit(background_image, (0, 0))
+    if start_page:
+        draw_start_page()
+    elif end_screen:
+        draw_end_screen()
+    else:
+        # Draw the question
+        question_text = font.render(questions[current_question], True, BLACK)
+        question_rect = question_text.get_rect(midtop=(SCREEN_WIDTH // 2, int(SCREEN_HEIGHT / 15)))
+        pygame.draw.rect(screen, GREY, question_rect.inflate(PADDING_X, PADDING_Y))
+        pygame.draw.rect(screen, RED, question_rect)
+        screen.blit(question_text, question_rect)
 
+        # Draw the score
+        score_text = font.render(f"Score: {score}/{len(questions)}", True, BLACK)
+        score_rect = score_text.get_rect(bottomleft=(SCREEN_WIDTH // 20, SCREEN_HEIGHT - SCREEN_HEIGHT // 20))
+        pygame.draw.rect(screen, GREY, score_rect.inflate(PADDING_X, PADDING_Y))
+        pygame.draw.rect(screen, RED, score_rect)
+        screen.blit(score_text, score_rect)
 
-    # Controleer of een nieuwe highscore is behaald
-    if quiz_ended and score > high_scores[0]:
-        # Update en schrijf de highscores naar het bestand
-        high_scores = update_high_scores(high_scores, score)
-        write_high_scores(high_scores_file, high_scores)
+        # Draw the buttons
+        buttons = []
+        for i, (answer, correct) in enumerate(answers[current_question]):
+            button_x = SCREEN_WIDTH // 2 + (BUTTON_RADIUS * 2 + BUTTON_GAP_X) * (i % 2 == 0 and -1 or 1)
+            button_y = SCREEN_HEIGHT // 3 + (BUTTON_RADIUS * 2 + BUTTON_GAP_Y) * (i // 2)
+            button = Button(answer, (button_x, button_y))
+            buttons.append(button)
+            button.draw()
 
-screen.fill(WHITE)
+    pygame.display.flip()
 
-draw_end_screen()
-
-pygame.time.wait(3000)
 pygame.quit()
 sys.exit()
