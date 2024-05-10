@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <title>GeoGenius</title>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/brython@3.9.5/brython.min.js"></script>
+    <style>
+        body {
+            background-color: #F0F0F0;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+
+        #quiz-container {
+            background-color: #FFFFFF;
+            max-width: 90%;
+            margin: 50px auto;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            position: relative;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 24px;
+            color: #333333;
+        }
+
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        li {
+            margin-bottom: 10px;
+        }
+
+        #restart-button {
+            background-color: #f44336;
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            display: none; /* Verberg de restart-knop standaard */
+        }
+
+        button {
+            background-color: #4CAF50;
+            border: none;
+            color: white;
+            padding: 15px 32px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+            border-radius: 8px;
+        }
+
+        #options {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .option-group {
+            display: flex;
+            flex-direction: row;
+        }
+
+        .option-group + .option-group {
+            margin-top: 10px;
+        }
+
+        .option-group li {
+            margin-right: 10px;
+        }
+
+        .option-group li:last-child {
+            margin-right: 0;
+        }
+
+        .option-group input[type="radio"] {
+            display: none;
+        }
+
+        .option-group label {
+            background-color: #4CAF50;
+            border: none;
+            color: white;
+            padding: 15px;
+            text-align: center;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            cursor: pointer;
+            border-radius: 8px;
+            width: 200px;
+            height: 50px;
+            margin: 5px;
+        }
+
+        .option-group input[type="radio"]:checked + label {
+            background-color: #1b5f1e;
+        }
+
+        #question-image {
+            margin: 0 auto;
+            display: block;
+        }
+    </style>
+</head>
+<body onload="brython()">
+    <div id="quiz-container">
+        <div id="question-container">
+            <!-- Question -->
+            <h1 id="question">Welk type gesteente ontstaat door de metamorfose van bestaande gesteenten?</h1>
+            <img id="question-image" src="" alt="" style="width: 200px; height: auto; display: none;">
+        </div>
+        <ul id="options">
+            <div class="option-group">
+                <li><input type="radio" name="answer" id="option1" value="Metamorf"><label for="option1">Metamorf</label></li>
+                <li><input type="radio" name="answer" id="option2" value="Sedimentair"><label for="option2">Sedimentair</label></li>
+            </div>
+            <div class="option-group">
+                <li><input type="radio" name="answer" id="option3" value="Igneous"><label for="option3">Igneous</label></li>
+                <li><input type="radio" name="answer" id="option4" value="Magma"><label for="option4">Magma</label></li>
+            </div>
+        </ul>
+        <!-- Score and highscore -->
+        <p id="score">Score: 0</p>
+        <p id="high-score">High Score: 0</p>
+        <!-- Submit button -->
+        <button id="submit-button">Volgende</button>
+        <!-- Restart button -->
+        <button id="restart-button">Opnieuw starten</button>
+    </div>
+
+    <script type="text/python">
+        from browser import document, window
+    
+        # Define questions and answers
+        questions = [
+            ("Welk type gesteente ontstaat door de metamorfose van bestaande gesteenten?", None),
+            ("Uit welk type gesteente wordt kalksteen gevormd?", None),
+            ("Welk type gesteente ontstaat door het afzetten en verdichten van sedimenten?", None),
+            ("Wat voor gesteente is dit?", "Obsidiaan.jpg")
+        ]
+    
+        answers = [
+            [["Sedimentair", False], ["Metamorf", True], ["Igneous", False], ["Magma", False]],
+            [["Sedimentair", True], ["Graniet", False], ["Leisteen", False], ["Kwartsiet", False]],
+            [["Sedimentair", False], ["Magma", False], ["Igneous", True]],
+            [["Obsidiaan", True], ["Basalt", False], ["Pluimsteen", False], ["Porfier", False]]
+        ]
+    
+        current_question_index = 1
+        score = 0
+        high_score = int(window.localStorage.getItem('high_score') or 0)
+    
+        # Function to show the next question or end the quiz
+        def show_next_question(evt):
+            global current_question_index, score
+            selected_answer = document['options'].querySelector('input[type="radio"]:checked')
+            if selected_answer:
+                selected_answer_value = selected_answer.value
+                if selected_answer_value == [answer[0] for answer in answers[current_question_index - 1] if answer[1]][0]:
+                    score += 1
+                    score_element.text = f"Score: {score}"
+                    current_question_index += 1
+                    if current_question_index <= len(questions):
+                        # Show the next question
+                        question_text, image_path = questions[current_question_index - 1]
+                        question_element.text = question_text
+                        if image_path:
+                            question_image_element = document['question-image']
+                            question_image_element.src = image_path
+                            question_image_element.style.display = 'block'
+                        else:
+                            document['question-image'].style.display = 'none'
+                        # Update answer options
+                        answer_options = answers[current_question_index - 1]
+                        for i in range(len(answer_options)):
+                            document['option'+str(i+1)].value = answer_options[i][0]
+                            document['option'+str(i+1)].nextSibling.textContent = answer_options[i][0]
+                        # Reset selected option
+                        selected_answer.checked = False
+                    else:
+                        # Quiz ended
+                        document['options'].style.display = 'none'  # Hide the options
+                        document['question-container'].remove()  # Remove the question container
+                        # Update high score if necessary
+                        if score > high_score:
+                            high_score = score  # Update high score
+                            document['high-score'].text = f"High Score: {high_score}"
+                            # Store high score in local storage
+                            window.localStorage.setItem('high_score', str(high_score))
+                        # Show restart button
+                        restart_button = document['restart-button']
+                        restart_button.style.display = 'block'
+                        restart_button.style.margin = 'auto'  # Center the restart button
+                        # Show final score and high score in the middle
+                        score_element.style.display = 'block'
+                        high_score_element.style.display = 'block'
+                        score_element.style.margin = 'auto'  # Center the score horizontally
+                        score_element.style.position = 'relative'  # Change position to relative
+                        score_element.style.top = '50%'  # Move the score 50% from the top
+                        score_element.style.transform = 'translateY(-50%)'  # Vertically center the score
+                        high_score_element.style.margin = 'auto'  # Center the high score horizontally
+                        high_score_element.style.position = 'relative'  # Change position to relative
+                        high_score_element.style.top = '50%'  # Move the high score 50% from the top
+                        high_score_element.style.transform = 'translateY(-50%)'  # Vertically center the high score
+            else:
+                window.alert("Selecteer een antwoord voordat u doorgaat.")
+    
+        # Add an event listener to the "Next" button
+        document['submit-button'].bind('click', show_next_question)
+    
+        # Show the first question
+        question_element = document['question']
+        question_text, image_path = questions[current_question_index - 1]
+        question_element.text = question_text
+        if image_path:
+            question_image_element = document['question-image']
+            question_image_element.src = image_path
+            question_image_element.style.display = 'block'
+        else:
+            document['question-image'].style.display = 'none'
+    
+        # Show the score
+        score_element = document['score']
+        score_element.text = "Score: " + str(score)
+    
+        # Show the high score
+        high_score_element = document['high-score']
+        high_score_element.text = "High Score: " + str(high_score)
+    
+        # Function to restart the quiz and refresh the page
+        def restart_quiz(evt):
+            # Refresh the page
+            window.location.reload()
+
+        # Add an event listener to the restart button
+        restart_button = document['restart-button']
+        restart_button.bind('click', restart_quiz)
+    
+        # Always make the score and highscore visible
+        score_element.style.display = 'block'
+        high_score_element.style.display = 'block'
+    </script>    
+</body>
+</html>
